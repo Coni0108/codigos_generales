@@ -1,0 +1,167 @@
+---
+title: "trabajo 1"
+author: "Equipo 8"
+date: "16-08-2021"
+output: pdf_document
+---
+Importar base de datos
+```{r message=FALSE, warning=FALSE}
+library(readxl)
+library(dplyr)
+EME <- read_excel("Base de datos Full EXCEL EME 6.xlsx") %>% 
+  select(Enc_rph, region, sexo, nacionalidad, cine_EME, a6, a8, a10, b1, b4_1,c1_caenes_red, c3_h, c3_m, c6_1, c8, d7_2, e3, e4, e9, f4_trabajadores, d3_c_1,d3_c_2,d3_c_3,d3_c_4,
+         d3_c_5,d3_c_6,d3_c_7, a9)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+EME$sexo <- factor(EME$sexo, labels = c("HOMBRE", "MUJER"))
+
+EME$d7_2[is.na(EME$d7_2)] <- 0
+EME$d3_c_1[is.na(EME$d3_c_1)] <- 0
+EME$d3_c_2[is.na(EME$d3_c_2)] <- 0
+EME$d3_c_3[is.na(EME$d3_c_3)] <- 0
+EME$d3_c_4[is.na(EME$d3_c_4)] <- 0
+EME$d3_c_5[is.na(EME$d3_c_5)] <- 0
+EME$d3_c_6[is.na(EME$d3_c_6)] <- 0
+EME$d3_c_7[is.na(EME$d3_c_7)] <- 0
+
+EME <- EME %>% mutate(gastos_totales=rowSums(EME[,22:28]))
+
+EME <- EME %>% mutate(region=recode(region, 
+                         `1`="TARAPACÁ",
+                         `2`="ANTOFAGASTA",
+                         `3`="ATACAMA",
+                         `4`="COQUIMBO",
+                         `5`="VALPARAÍSO",
+                         `6`="BERNARDO_OH",
+                         `7`="MAULE",
+                         `8`="BIOBÍO",
+                         `9`="LA_ARAUCANÍA",
+                         `10`="LOS_LAGOS",
+                         `11`="AYSÉN",
+                         `12`="MAGALLANES",
+                         `13`="METROPOLITANA",
+                         `14`="LOS_RÍOS",
+                         `15`="ARICA_Y_PARINACOTA",
+                         `16`="ÑUBLE"))
+EME <- EME %>% 
+  mutate(nacionalidad=recode(nacionalidad,
+                             `0`="CHILENA",
+                             `1`="EXTRANJERA"))
+EME <- EME %>% 
+  mutate(cine_EME=recode(cine_EME,
+                         `1`= "SIN_ED",
+                         `2`= "BÁSICA",
+                         `3`= "MEDIA",
+                         `4`= "SUPERIOR_TEC",
+                         `5`= "SUPERIOR_UNIV",
+                         `6`= "POSTÍTULO"))
+EME <- EME %>% 
+  mutate(c1_caenes_red=recode(c1_caenes_red,
+                              `1`= "AGRICULTURA_PESCA",
+                              `2`= "SECTOR_PRIMARIO",
+                              `3`= "MANUFACTURERAS",
+                              `4`= "CONSTRUCCIÓN",
+                              `5`= "COMERCIO",
+                              `6`= "TRANSPORTE",
+                              `7`="INMOBILIARIA",
+                              `8`= "SERVICIOS"))
+```
+
+```{r}
+cor.test(EME$region, EME$cine_EME)
+```
+
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+ggplot(EME, aes(cine_EME,fill=sexo)) +
+  geom_bar() +
+  facet_grid(~sexo) +
+  xlab("Nivel de Educación") +
+  ggtitle("Nivel de Educación según Sexo") +
+  theme(axis.text.x = element_text(angle = 30,    #Roto 30° las etiquetas del eje x
+                                   size = 6))
+```
+
+```{r}
+library(ggplot2)
+library(ggthemes)
+library(forcats)
+library(dplyr)
+## INTENTO 1
+EME %>%
+  filter(d7_2!=0) %>%
+  mutate(c1_caenes_red = fct_reorder(c1_caenes_red, d7_2)) %>%
+  ggplot(aes(x=c1_caenes_red, y=d7_2)) +
+    geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+    xlab("") +
+    theme_bw()
+
+## INTENTO 2
+EME %>%
+  filter(d7_2!=0) %>% 
+  ggplot(aes(x=c1_caenes_red, y=d7_2)) +
+  geom_col()+
+  coord_flip() +
+    theme_bw() +
+    xlab("")
+
+
+## INTENTO 3
+EME <-  EME %>% 
+  arrange(c1_caenes_red, desc(d7_2))
+
+EME %>%
+  ggplot( aes(x=c1_caenes_red, y=d7_2)) +
+  geom_col() +
+  ggtitle("Ingresos 2018 por industria") +
+  xlab("Ingreso Anual 2018") +
+  ylab("Tipo de Industria") +
+  coord_flip()
+
+## INTENTO 4
+EME %>%
+  mutate(c1_caenes_red = fct_reorder(c1_caenes_red, desc(d7_2))) %>%
+  ggplot(aes(x=c1_caenes_red, y=d7_2)) +
+    geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+    coord_flip() +
+    xlab("") +
+    theme_bw()
+
+
+
+```
+```{r}
+gr1=ggplot(EME, aes(d7_2)) +
+  geom_histogram() +
+  facet_wrap(~ c1_caenes_red) +
+  xlab("Ingresos Año 2018")
+
+gr2=EME %>% 
+  filter(d7_2<200000000 & d7_2 > 0 ) %>% 
+  ggplot(aes(d7_2)) +
+   geom_histogram() +
+  facet_wrap(~ c1_caenes_red) +
+  xlab("Ingresos Año 2018")
+library(patchwork)
+gr1+gr2
+```
+
+
+```{r}
+EME$a9[is.na(EME$a9)] <- 0
+
+for (i in 1:length(EME$a9)){
+if (EME$a9[i]==1) {EME$a9[i]="ESTATAL"} else
+if (EME$a9[i]==2) {EME$a9[i]="PRIVADA"} else
+if (EME$a9[i]==3) {EME$a9[i]='HOGAR_PARTICULAR'} else
+{EME$a9[i]='OTRO'}}
+
+
+```
+
+

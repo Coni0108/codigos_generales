@@ -1,0 +1,549 @@
+---
+output:
+  pdf_document: null
+  keep_tex: yes
+  df_print: paged
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = F,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{=tex}
+\begin{titlepage}
+\centering
+  
+ \begin{center} 
+   
+        
+\includegraphics[width=10cm, height=5cm]{logo_UDP.png}
+
+\vspace{4cm}
+
+   { \scshape\Huge Informe Econometría \par}
+      \vspace{10.5cm}
+
+
+  
+\begin{flushright}
+   {\Large \bf{Integrantes:} \par}
+       
+  {\Large Constanza Guajardo\\ José Oporto\\ Montserrat Díaz \par}
+         \vfill
+\end{flushright}
+   
+
+   \vspace{-20cm} 
+   
+
+\begin{flushleft}
+
+   {\Large \bf{Profesor:} \par}
+  {\Large Víctor Macías \par}
+   {\Large \bf{Profesor Auxiliar:} \par}
+  {\Large Juan Felipe Ly \par} 
+ 
+   
+\end{flushleft}
+  
+   
+  \end{center}
+
+
+
+
+ \end{titlepage}
+```
+\newpage
+
+\renewcommand\\*\\\\
+
+contentsname{Índice}
+
+\tableofcontents
+
+\newpage
+
+\section{Introducción}
+
+En Chile las microempresas son parte fundamental de la actividad económica del país, generando una parte importante del empleo a nivel nacional.
+
+Según la última Encuesta Nacional de Empleo (ENE) del INE, 2.774.193 trabajadores en el país realizan sus labores en microempresas (de 1 a 10 trabajadores), las que concentran el 37,3% de los empleos formales, seguida de las grandes (200 trabajadores o más), con el 34,6%, lo que representa a 2.574.977 personas.
+
+Por otra parte, según reportó el Servicio de Impuestos Internos en 2019, el 75,5% de las empresas a nivel nacional son microempresas, y el 23,1% son pequeñas o medianas. Dejando solo un 1,4% para las grandes empresas.
+
+Esto convierte a las microempresas en un lugar interesante a la hora de investigar y realizar conclusiones que nos ayuden a entender cómo se conforman, a qué se debe su éxito y por qué algunas fracasan y otras prosperan.
+
+En esta oportunidad, hemos escogido realizar la siguiente pregunta de investigación, ¿Cuál es la relación que existe entre el perfil del emprendedor (sus características personales) y las ganancias de su microemprendimiento?
+
+Para esto hemos seleccionado los datos correspondientes a la [[Sexta Encuesta de Microemprendimientos en Chile]{.ul}](https://www.economia.gob.cl/2020/03/11/sexta-encuesta-de-microemprendimiento-eme6.htm "Link Encuesta") (EME) elaborada en conjunto por el **Instituto Nacional de Estadísticas** y la **Unidad de Estudios del Ministerio de Economía, Fomento y Turismo**, entre la segunda semana de mayo y la primera semana de agosto de **2019**, encuestándose a **7.808** **personas**.
+
+La encuesta consta de datos transversales y observacionales, es decir, se les hizo una serie de preguntas a microemprendedores (dueños de empresas de 1 a 10 trabajadores) de forma simultánea sin ejercer ningún tipo de tratamiento que pudiera afectarlos.
+
+\subsection{¿A qué nos referimos con el "perfil del emprendedor"?}
+
+Hablamos de la caracterización de la persona encargada del negocio en crecimiento, es decir, su sexo, su edad, de dónde viene, qué educación alcanzó, etc. y veremos la relación que tienen estos factores en el éxito de su microemprendimiento medido en las ganancias que éste tiene.
+
+\newpage
+
+\subsection{Veamos un poco de los datos...}
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(readxl)
+library(dplyr)
+EME <- read_excel("Base de datos Full EXCEL EME 6.xlsx") %>% 
+  select(Enc_rph, region, sexo, nacionalidad, cine_EME, motivacion_eme,
+         financiamiento_inicial, c1_caenes_red, c3_h, c3_m, c6_1, d7_2, Registro_UE,
+         e9, f4_trabajadores,capacitacion, grupo_edad, gasto_anual)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# RENOMBRAR COLUMNAS ----
+colnames(EME) <- c(Enc_rph="ID",
+                   region="region",
+                   sexo="sexo",
+                   nacionalidad="nacionalidad",
+                   cine_EME="educ",
+                   motivacion_eme="motivacion",
+                   financiamiento_inicial="financiamiento",
+                   c1_caenes_red="sector",
+                   c3_h="N_dueños",
+                   c3_m="N_dueñas",
+                   c6_1="N_dias_trabajo",
+                   d7_2="Ganancia_2018",
+                   Registro_UE="SII",
+                   e9="permiso_patente",
+                   f4_trabajadores="N_trabajadores",
+                   capacitaron="capacitacion",
+                   grupo_edad="grupo_edad",
+                   gasto_anual="gasto_anual")
+```
+
+```{r}
+# recodificación variable SII en donde 1 es SI, 0 es NO.
+EME <- EME %>% 
+  mutate(SII = recode(SII,
+                     `1`=1,
+                     `2`=1,
+                     `3`=0))
+```
+
+```{r}
+EME <- EME %>%
+  filter(permiso_patente!=88 & permiso_patente!=99)
+EME <- EME %>% 
+  filter(Ganancia_2018!=88 & Ganancia_2018!=99)
+EME <- EME %>% 
+  filter(N_dias_trabajo!=88)
+EME <- EME %>% 
+  filter(financiamiento!=4)
+EME <- EME %>% 
+  filter(motivacion!=5)
+```
+
+```{r}
+# recodificación de variable REGION (1 RM, 0 si es otra región)
+EME <- EME %>% mutate(region=recode(region, 
+                                    `1`="TARAPACÁ",
+                                    `2`="ANTOFAGASTA",
+                                    `3`="ATACAMA",
+                                    `4`="COQUIMBO",
+                                    `5`="VALPARAÍSO",
+                                    `6`="BERNARDO_OH",
+                                    `7`="MAULE",
+                                    `8`="BIOBÍO",
+                                    `9`="LA_ARAUCANÍA",
+                                    `10`="LOS_LAGOS",
+                                    `11`="AYSÉN",
+                                    `12`="MAGALLANES",
+                                    `13`="METROPOLITANA",
+                                    `14`="LOS_RÍOS",
+                                    `15`="ARICA_Y_PARINACOTA",
+                                    `16`="ÑUBLE"))
+
+# Lo dea rriba fue innecesario finalmente puesto que cambiamos la variable a dummy.
+for (i in 1:length(EME$region)){ 
+if (EME$region[i]=="METROPOLITANA") {EME$region[i]=1} else
+{EME$region[i]=0}}
+```
+
+```{r}
+
+EME <- EME %>% 
+  mutate(educ=recode(educ,
+                         `1`= "SIN_ED",
+                         `2`= "BÁSICA",
+                         `3`= "MEDIA",
+                         `4`= "SUPERIOR_TEC",
+                         `5`= "SUPERIOR_UNIV",
+                         `6`= "POSTÍTULO"))
+
+```
+
+```{r}
+EME <- EME %>% 
+  mutate(sector=recode(sector,
+                       `1`= "AGRICULTURA Y PESCA",
+                       `2`= "SECTOR PRIMARIO",
+                       `3`= "MANUFACTURERAS",
+                       `4`= "CONSTRUCCIÓN",
+                       `5`= "COMERCIO",
+                       `6`= "TRANSPORTE",
+                       `7`= "INMOBILIARIA",
+                       `8`= "SERVICIOS"))
+```
+
+```{r}
+EME <- EME %>% 
+  mutate(grupo_edad=recode(grupo_edad,
+                           `1`= "15-24",
+                           `2`= "25-34",
+                           `3`= "35-44",
+                           `4`= "45-54",
+                           `5`= "55-64",
+                           `6`= "65-más"))
+```
+
+```{r}
+EME <- EME %>% 
+  mutate(financiamiento=recode(financiamiento,
+                               `1`= "AHORROS",
+                               `2`= "NO NECESITA",
+                               `3`= "PRÉSTAMO O CRÉDITO"))
+```
+
+```{r}
+EME <- EME %>% 
+  mutate(motivacion=recode(motivacion,
+                           `1`= "TRADICIÓN FAMILIAR",
+                           `2`= "NECESIDAD",
+                           `3`= "OPORTUNIDAD",
+                           `4`= "OTRO"))
+```
+
+```{r}
+# RECODIFICAR LA NATURALEZA DE LOS DATOS
+EME$ID <- as.factor(EME$ID)
+EME$sexo <- as.factor(EME$sexo)
+EME$region <- as.factor(EME$region)
+EME$SII <- as.factor(EME$SII)
+EME$permiso_patente <- as.factor(EME$permiso_patente)
+EME$capacitacion <- as.factor(EME$capacitacion)
+EME$nacionalidad <- as.factor(EME$nacionalidad)
+```
+
+```{r}
+# AJUSTAR ESCALA
+EME <- EME %>% 
+  mutate(Ganancia_2018=Ganancia_2018/1000000)
+EME <- EME %>% 
+  mutate(gasto_anual=gasto_anual/1000000)
+```
+
+```{r}
+EME %>%
+  select(ID, region, sexo, nacionalidad, educ, motivacion,financiamiento,sector,N_dueños,
+         N_dueñas,N_dias_trabajo,Ganancia_2018,SII,permiso_patente,N_trabajadores,
+         capacitacion,grupo_edad,gasto_anual) %>% 
+  glimpse()
+```
+
+La base de datos tiene un total de *7.808* observaciones y *430* variables, de las cuales trabajaremos con 18 dado que el informe no requiere de más, y estas son:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(dplyr)
+
+
+Variable <- c("ID", "region", "sexo", "nacionalidad", "educ", "motivacion",
+              "financiamiento","sector","N_dueños","N_dueñas","N_dias_trabajo",
+              "Ganancia_2018","SII","permiso_patente","N_trabajadores",
+              "capacitacion","grupo_edad","gasto_anual")
+Tipo <- c("Cualitativa","Cualitativa","Cualitativa","Cualitativa","Cualitativa","Cualitativa",
+          "Cualitativa","Cualitativa","Cuantitativa","Cuantitativa","Cuantitativa",
+          "Cuantitativa","Cualitativa","Cualitativa","Cuantitativa",
+          "Cualitativa","Cualitativa","Cuantitativa")
+Descripcion <- c("ID o folio del entrevistado/a",
+                 "Región a la que pertenece",
+                 "Sexo de la persona (f/m)",
+                 "Chilena / extranjera",
+                 "Nivel de Educación",
+                 "Motivación principal para iniciar su actual negocio propio",
+                 "Fuente principal de financiamiento para dar pie al negocio.",
+                 "Actividad Principal que desarrolla el emprendedor.",
+                 "Número de hombres que son dueños o socios del negocio.",
+                 "Número de mujeres que son dueñas o socias del negocio",
+                 "Cantidad de días que trabaja semanalmente en su negocio.",
+                 "Ganancia por venta durante el año 2018 (en CLP)",
+                 "¿Ya inició actividades en el SII?",
+                 "¿El emprendedor cuenta con patente o permiso municipal?",
+                 "Cantidad de trabajadores",
+                 "¿El emprendedor recibió capacitación?",
+                 "¿A qué grupo de edad pertenece el emprendedor?",
+                 "Gastos totales anuales")
+
+
+df <- cbind(Variable, Tipo, Descripcion) %>% data.frame()
+df %>% 
+  flextable() %>% 
+  theme_booktabs() %>% 
+  autofit() %>% 
+  set_caption(caption="Variables a trabajar")
+```
+
+\newpage
+
+\section{Análisis de Estadística Descriptiva}
+
+\subsection{Medidas de localización}
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(skimr)
+library(dplyr)
+library(flextable)
+library(officer)
+
+
+EME <- EME %>%
+filter(Ganancia_2018>=0) #tomaremos en cuenta solo ganancias, no pérdidas
+
+medidas <- EME %>% #eliminamos las observaciones "no sabe"
+  skim() %>%
+  yank("numeric") %>%
+  data.frame() %>%
+  select(-c(complete_rate, n_missing, hist))
+
+colnames(medidas) <- c(skim_variable= "variable",
+                       mean= "mean",
+                       sd="sd",
+                       p0="p0",
+                       p25="p25",
+                       p50="p50",
+                       p75="p75",
+                       p100="p100")
+medidas$mean <- round(medidas$mean, 2)
+medidas$sd <- round(medidas$sd, 2)
+medidas$p50 <- round(medidas$p50, 2)
+medidas$p0 <- round(medidas$p0, 2)
+medidas$p75 <- round(medidas$p75,2)
+medidas$p100 <- round(medidas$p100,2)
+medidas$p25 <- round(medidas$p25,2)
+
+qflextable(medidas) %>% 
+  set_caption(caption="Estadística Descriptiva") %>% 
+  footnote(i=4, j=1, value =as_paragraph(c("Las ganancias del año 2018 están en escala de millones de pesos (clp) para facilitar la lectura.")), ref_symbols = c("1"), part = "body") %>%
+  footnote(i=6,j=1, value = as_paragraph(c("Los gastos del año 2018 están en escala de millones de pesos (clp) para facilitar la lectura.")), ref_symbols = c("2"), part = "body")
+
+```
+
+\subsection{Dispersión de datos}
+
+```{r echo=FALSE,message=FALSE, warning=FALSE}
+library(dplyr)
+library(tinytex)
+
+EME %>% 
+  filter(Ganancia_2018>=0) %>%
+  select_if(is.numeric) %>% 
+  pairs(main="Matriz de Correlaciones")
+```
+
+Del gráfico de correlaciones podemos destacar la alta correlación entre las variables "gasto_anual" y "Ganancia_2018", esto debido a que , normalmente, los negocios que más ganancias obtienen tienden a invertir más dinero en gastos asociados al negocio.
+
+\subsection{Distribución de los datos}
+
+```{r echo=FALSE}
+library(dplyr)
+library(ggplot2)
+
+EME %>% 
+  filter(Ganancia_2018 >= 0) %>% 
+  ggplot(aes(Ganancia_2018, fill="red")) +
+  geom_density() +
+  ggtitle("Distribución de las ganancias 2018") +
+  labs(x="Ganancias Año 2018", y="Densidad") +
+  theme_classic() +
+  theme(axis.title.x = element_text(vjust=0.1,face="bold",size=rel(1.5))) +
+  theme(axis.title.y = element_text(vjust=0.1, face="bold",size=rel(1.5))) +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())+
+  theme(axis.text.x = element_text(face="bold",colour="black", size=rel(1)),
+         axis.text.y = element_text(face="bold",colour="black", size=rel(0.9)
+                                    , angle=0, hjust=0.5)) +
+  theme(plot.title = element_text(face = "bold", size = rel(1.5)))  +
+  theme(legend.position = "none")
+
+```
+
+
+Como observamos en el gráfico de densidad, la concentración de la variable X se concentra entre los 10 y 50 millones de pesos anuales, aproximadamente. Tiene una asimetría hacia la derecha, es decir, hay muy pocos emprendedores que generaron ganancias por sobre los 200 millones de pesos, es por esto que la línea de densidad es prácticamente 0. Y, por último, los datos tienen muy poca dispersión a excepción del caso dicho anteriormente (el ancho de la campana es acotado).
+
+\newpage
+
+\section{Análisis de gráficos}
+
+1.  Gráfico de barras: Ganancias por Sector Industrial
+
+```{r echo=FALSE}
+library(dplyr)
+library(ggthemes)
+library(ggplot2)
+
+EME %>%
+  filter(sector!="NA") %>%
+  ggplot(aes(x=Ganancia_2018, y=sector, fill=sector)) +
+  geom_col() +
+  theme(axis.title.x = element_text(vjust=0.1,face="bold",size=rel(1.5))) +
+  theme(axis.title.y = element_text(vjust=0.1, face="bold",size=rel(1.5))) +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())+
+  theme(axis.text.x = element_text(face="bold",colour="black", size=rel(1)),
+         axis.text.y = element_text(face="bold",colour="black", size=rel(0.9)
+                                    , angle=0, hjust=0.5)) +
+  ylab("Sector Industrial")+
+  xlab("Ganancias Año 2018")+
+  ggtitle("Ganancias por sector Industrial 2018")+
+  theme(plot.title = element_text(face = "bold", size = rel(1.5))) +
+  facet_wrap(~sexo) +
+  theme(legend.position="none")
+
+```
+
+
+Del gráfico de barras podemos destacar el sector de "Servicios" que generó más de 9 mil millones de pesos en el año 2018. Por el contrario, tenemos el sector primario que fue el área donde menos hubo ganancias; el emprendedor/a que obtuvo mayor utilidad generó cerca de 60 millones de pesos, aproximadamente. También destacar el área de comercio, puesto que también tiene una gran diferencia (positiva) con los demás sectores.
+
+
+\newpage
+2. Diagrama de Caja: Ganancias según Sexo
+
+```{r echo=FALSE}
+library(ggthemes)
+library(ggplot2)
+library(dplyr)
+
+EME %>% 
+  filter(Ganancia_2018 < 30) %>% 
+ggplot(aes(x=sexo, y=Ganancia_2018, fill=sexo)) + 
+    geom_boxplot() +
+    labs(title="Ganancias según Sexo del emprendedor", 
+         subtitle="", 
+         y="Ganancias Año 2018", 
+         x="Sexo") +
+    theme_classic() +
+  scale_fill_discrete(name = "Sexo",labels = c("Hombre","Mujer"))
+
+```
+
+
+Para mayor comodidad y mejor lectura del gráfico, se decidió enfocarnos en los emprendedores que generaron menos de 30 millones de pesos en el año 2018 (casi toda la concentración de los datos estaba en ese rango). De esta forma, tenemos que hay mayor cantidad de hombres que obtienen ganancias cercanas a los 10 millones de pesos. De hecho, el 50% de los hombres bordea los 5 millones anuales. En cambio, el 50% de las mujeres está más cerca de los 2 millones de pesos. Otro punto a destacar son los outliers o valores extremos: ambos sexos tienen emprendedores que generan mayores ganancias que el promedio.
+
+
+\newpage
+3. Histograma: Educación alcanzada según Sexo
+
+```{r echo=FALSE}
+library(ggplot2)
+ggplot(EME, aes(educ, fill=sexo)) +
+  geom_bar() +
+  facet_grid(~sexo) +
+  xlab("Nivel de Educación") +
+  ylab("Cantidad") +
+  ggtitle("Nivel de Educación según Sexo") +
+  theme(axis.text.x = element_text(angle = 40,   
+                                   size = 6)) +
+  scale_fill_discrete(name = "Sexo",labels = c("Hombre","Mujer"))
+```
+
+
+
+Como observación principal, se puede decir que no hay mayor diferencia entre la educación que alcanzaron hombres y mujeres, dado que en la muestra con la que trabajamos hay cerca de un 60% de encuestados de sexo masculino versus un 40% de sexo femenino. La variación más notoria se ve en las barras de educación básica y media de ambos sexos: hay mayor diferencia de mujeres que sólo alcanzaron la enseñanza básica y media, respecto a la diferencia que existe entre los hombres. De hecho, más de 500 mujeres terminaron la enseñanza básica versus las más de mil que terminaron la enseñanza media (el doble). No así los hombres, que tienen una diferencia de no más de 300 personas entre ambos niveles educacionales.
+
+4.  Gráfico de dispersión: Ganancias vs Gastos
+
+```{r echo=FALSE}
+EME %>% 
+  filter(Ganancia_2018 >=0) %>% 
+ggplot(aes(x=Ganancia_2018, y=gasto_anual)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method = "lm", se=F) +
+  labs(x="Ganancias Año 2018", y="Gasto Año 2018") +
+  ggtitle("Ganancias y Gastos Anuales 2018")
+```
+
+
+
+En este gráfico de puntos se destaca la relación positiva que existe entre ambas variables. Sin embargo, llama la atención la observación que obtuvo una ganancia de 600 millones y sólo gastó 100 (aproximadamente). Una teoría puede ser que obtuvo un retorno acumulado de inversiones pasadas y mantuvo sus gastos fijos. Otra cosa a destacar, es la gran cantidad de emprendedores que tuvieron pocas ganancias e incurrieron en gastos altos.
+
+\section{Modelo econométrico}
+
+**Elección de las variables** El modelo considera la variable Ganancias2018 como una la variable dependiente, ya que refleja en gran medida el éxito del negocio en términos económicos.
+
+Los regresores serán variables de la base de datos (EME) que cumplan con los siguientes requisitos:
+
+(1) Variables numéricas.
+(2) Variables que representen características propias del microemprendedor, creando así un perfil de este mismo.
+(3) Variables que al realizar la regresión contribuyan a mejorar el R2 ajustado.
+
+Dado lo anterior, las variables regresoras escogidas fueron: sexo, region, grupo de edad, motivación, el nivel de estudios y capacitación.
+
+Representamos lo anterior en el siguiente modelo:
+
+**Representación del modelo**
+$$
+ Ganancias2018 = \beta_0 + \beta_1 \cdot (sexo) + \beta_2 \cdot (region) + \beta_3\cdot (grupo\_edad) + \beta_4 \cdot (educ) + \beta_5 \cdot (capacitacion) +
+ \beta_6 \cdot (motivacion) + u
+$$
+Realizamos la regresión, obteniendo los siguientes resultados:
+
+<center>
+
+```{r}
+library(stargazer)
+library(moderndive)
+r1 <- lm(Ganancia_2018~sexo+region+grupo_edad+educ+motivacion+capacitacion, EME)
+get_regression_summaries(r1)
+stargazer(list(r1),
+          type = "text",
+          header = F,
+          no.space = TRUE,
+          digits=3)
+```
+
+</center>
+
+**Aclaración bases categóricas**
+
+Para las variables categóricas se tomó como base la primera categoría en orden alfabético, quedando así la categoría "hombres" como base para la variable sexo, "región metropolitana" para la variable región, "grupo de edad 15-24" para los grupos de edad, "Necesidad" para la variable motivación, "Básica" para la variable nivel de educación y la respuesta "Sí" frente a la variable capacitación.
+
+**Conclusión**
+
+Concluimos que el 7,8% de la variabilidad de las ganancias de los microemprendedores para el año 2018 se explica debido al perfil del emprendedor que inició el negocio. Definiendo el perfil del emprendedor como el conjunto de características propias de este mismo, tales como sexo, región, grupo de edad, motivación, nivel de estudios y capacitación. Factores que son internos a la persona asociados a su origen, personalidad y aprendizaje.
+
+Si extrapolamos la realidad del año 2018 a la realidad de cada año en Chile, algunas interpretaciones que podemos realizar son las siguientes:
+
+-   Las mujeres en promedio tuvieron una ganancia anual menor que los hombres en -3.047 millones de pesos.
+
+-   Quienes pertenecen a la región metropolitana en promedio tienen 1.424 millones de pesos más anualmente que quienes pertenecen a otra región.
+
+-   El grupo de edad que suele experimentar un mayor cambio en sus ganancias a la hora de tener una microempresa es entre los 45 y 54 años.
+
+-   En promedio mientras mayor es el nivel de educación, más ganancias tendrá el microemprendedor.
+
+-   Quienes no tienen capacitación tienen en promedio 0.346 millones de pesos anuales menos en ganancias que quienes sí tienen capacitación.
+
+\section{Bibliografía}
+
+-   EMOL. (12 de Julio de 2021). Son casi el 99% de las empresas en Chile: Lo cifras detrás de las pymes, protagonistas en el debate previo a las primarias. El Mercurio.
+-   INE . (2019). Sexta encuesta de microemprendimiento . Instituto Nacional de Estadísticas y la Unidad de Estudios del Ministerio de Economía, Fomento y Turismo. Obtenido de <https://www.economia.gob.cl/2020/03/11/sexta-encuesta-de-microemprendimiento-eme6.htm> Wooldridge, J. (2004). Analisis de regresión lineal. En J. Wooldridge, Introducción a la econometría (4th edition ed.). Cengage Learning.
