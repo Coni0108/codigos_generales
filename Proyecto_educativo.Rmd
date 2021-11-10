@@ -1,0 +1,362 @@
+---
+title: "Rendimiento"
+author: "Constanza Guajardo Ligueño"
+date: "14-06-2021"
+output: 
+  html_document: 
+    theme: yeti
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+library(readr)
+base <- read_delim("20210317_Resumen_Rendimiento 2020_20210131.csv", 
+    ";", escape_double = FALSE, trim_ws = TRUE)
+
+```
+
+# Información de variables:
+
+*AGNO*: Numérico. Año de la información.
+
+*RBD*: Numérico. Rol Base de Datos del establecimiento.
+
+*NOM_RBD*: Character. Nombre del establecimiento.
+
+*COD_REG_RBD*: Numérico. Código de región en que se ubica el establecimiento.
+
+*COD_COM_RBD*: Numérico. Código oficial de comuna en que se ubica el establecimiento.
+
+*NOM_COM_RBD*: Character. Nombre de la comuna.
+
+*COD_DEPE2*: Numérico. Código de Dependencia del Establecimiento agrupado. (1: Municipales, 2: Particular Subvencionado, 3: Particular Pagado, 4: Corporación de Administración Delegada).
+
+*RURAL_RBD*: Numérico. Área geográfica en que se ubica el establecimiento. (0: Urbana, 1: Rural).
+
+*ESTADO_ESTAB*: Numérico. Estado del establecimiento: 1: Funcionando, 2: En receso, 3: Cerrado, 4: Autorizado sin matrícula.
+
+*COD_ENSE2*: Numérico. Niveles de enseñanza agrupados.
+
+*REP_HOM*: Numérico. Número de hombres que reprobaron el grado correspondiente.
+
+# Preguntas
+
+1.  ¿Cuántos hombres se retiraron por curso?
+2.  ¿Cuántas mujeres se retiraron por curso?
+3.  ¿Cuántas personas en total se retiraron por curso?
+4.  ¿Hay alguna relación entre la tasa de retiro y la comuna del colegio?
+5.  ¿En dónde hay más colegios/liceos?
+6.  ¿En dónde hay más colegios/liceos que imparten educación vespertina?
+7.  ¿En qué colegios hay mayor nivel de reprobados?
+8.  ¿En qué colegios hay menor nivel de reprobados?
+9.  ¿En qué colegios hay mayor nivel de aprobados?
+10. ¿En qué colegios hay menor nivel de aprobados?
+11. ¿En qué comunas hay más colegios públicos?
+12. ¿En qué comunas hay más colegios privados?
+
+```{r}
+library(dplyr)
+base <- base %>% 
+  filter(NOM_REG_RBD_A=="RM")
+```
+
+```{r}
+base$COD_DEPE <- NULL
+base$COD_PRO_RBD <- NULL
+base$COD_DEPROV_RBD <- NULL
+base$AGNO <- NULL
+base$DGV_RBD <- NULL
+base$NOM_DEPROV_RBD <- NULL
+base$RBD <- NULL
+base$COD_REG_RBD <- NULL
+base$NOM_REG_RBD_A <- NULL
+```
+
+### Pregunta 1: ¿Cuántos hombres se retiraron por curso?
+
+```{r}
+p1 <- data.frame(c01=sum(base$RET_HOM_01),
+           c02=sum(base$RET_HOM_02),
+           c03=sum(base$RET_HOM_03),
+           c04=sum(base$RET_HOM_04),
+           c05=sum(base$RET_HOM_05),
+           c06=sum(base$RET_HOM_06),
+           c07=sum(base$RET_HOM_07),
+           c08=sum(base$RET_HOM_08))
+p1
+```
+
+### Pregunta 2: ¿Cuántas mujeres se retiraron por curso?
+
+```{r}
+p2 <- data.frame(c001=sum(base$RET_MUJ_01),
+                 c002=sum(base$RET_MUJ_02),
+                 c003=sum(base$RET_MUJ_03),
+                 c004=sum(base$RET_MUJ_04),
+                 c005=sum(base$RET_MUJ_05),
+                 c006=sum(base$RET_MUJ_06),
+                 c007=sum(base$RET_MUJ_07),
+                 c008=sum(base$RET_MUJ_08))
+p2
+```
+
+### Pregunta 3: ¿Cuántas personas en total se retiraron por curso?
+
+```{r}
+p3 <- data.frame(primero=sum(p1$c01,p2$c001),
+                 segundo=sum(p1$c02,p2$c002),
+                 tercero=sum(p1$c03,p2$c003),
+                 cuarto=sum(p1$c04,p2$c004),
+                 quinto=sum(p1$c05,p2$c005),
+                 sexto=sum(p1$c06,p2$c006),
+                 septimo=sum(p1$c07,p2$c007),
+                 octavo=sum(p1$c08,p2$c008))
+p3
+```
+
+### Pregunta 4: ¿Hay alguna relación entre la tasa de retiro y la comuna del colegio?
+
+```{r}
+p4 <- data.frame(comuna=base$NOM_COM_RBD,
+                 h1=base$RET_HOM_01, h2=base$RET_HOM_02,
+                 h3=base$RET_HOM_03,h4=base$RET_HOM_04,
+                 h5=base$RET_HOM_05,h6=base$RET_HOM_06,
+                 h7=base$RET_HOM_07,h8=base$RET_HOM_08,
+                 m1=base$RET_MUJ_01,m2=base$RET_MUJ_02,
+                 m3=base$RET_MUJ_03,m4=base$RET_MUJ_04,
+                 m5=base$RET_MUJ_05,m6=base$RET_MUJ_06,
+                 m7=base$RET_MUJ_07,m8=base$RET_MUJ_08) %>% 
+  group_by(comuna) %>% 
+  summarise(h1=sum(h1),h2=sum(h2),h3=sum(h3),h4=sum(h4),
+            h5=sum(h5),h6=sum(h6),h7=sum(h7),h8=sum(h8),
+            m1=sum(m1),m2=sum(m2),m3=sum(m3),m4=sum(m4),
+            m5=sum(m5),m6=sum(m6),m7=sum(m7),m8=sum(m8),
+            total=sum(h1,h2,h3,h4,h5,h6,h7,h8,
+                      m1,m2,m3,m4,m5,m6,m7,m8),
+            percent=(total/13273)*100) %>% data.frame()
+p4
+```
+
+No lo creo. Las Condes está en el top 10 de la taza más alta de retiros.
+
+### Pregunta 5: ¿En dónde hay más colegios/liceos?
+
+```{r}
+p5 <- base %>%
+  select(NOM_RBD, NOM_COM_RBD) %>% 
+  distinct()
+colegiosxcomuna <- table(p5$NOM_COM_RBD) %>% sort(decreasing = TRUE) %>% data.frame()
+```
+
+Las comunas con más colegios/liceos son: - **La Florida** con 132 establecimientos. - **Puente Alto** con 126 establecimientos. - **Maipú** con 124 establecimientos. - **Santiago** con 115 establecimientos.
+
+### Pregunta 6: ¿En dónde hay más colegios/liceos que imparten educación vespertina?
+
+Según la base de datos, la variable que mide el tipo de jornada es *COD_ENSE2* que nos indica lo siguiente:
+
+-   2: Enseñanza Básica Niños.
+
+-   3: Educación Básica Adultos.
+
+-   5: Enseñanza Media Humanístico Científica Jóvenes.
+
+-   6: Educación Media Humanístico Científica Adultos.
+
+-   7: Enseñanza Media Técnico Profesional y Artística, Jóvenes.
+
+-   8: Educación Media Técnico Profesional y Artística, Adultos.
+
+Tenemos 222 colegios que imparten algún tipo de educación vespertina (básica, media científico-humanista o técnico) repartidos a lo largo de 47 comunas.
+
+```{r}
+p6 <- base %>% 
+  select(NOM_RBD, NOM_COM_RBD,COD_ENSE2) %>% 
+  filter(COD_ENSE2==3 | COD_ENSE2==6 | COD_ENSE2==8) %>% 
+  distinct() %>% data.frame()
+
+# Para averiguar cuáles son los colegios q tienen sólo 1 tipo d educ.
+# voltearemos la data p6
+library(reshape2)
+
+p6_1 <- p6 %>% 
+  select(-NOM_COM_RBD) %>% 
+  dcast(NOM_RBD~COD_ENSE2) %>% 
+  rename(básica=`3`,
+         media_HC=`6`,
+         media_tec=`8`) %>% 
+  mutate_all(~replace(., is.na(.), 0)) #reemplazamos los NA's por 0.
+
+# Colegios que tienen sólo educación básica para adultos
+col_b <- p6_1 %>% 
+  filter(básica==3 & media_HC==0 & media_tec==0)
+
+# Colegios que tienen sólo educación técnica para adultos
+col_tec <- p6_1 %>% 
+  filter(básica==0 & media_HC==0)
+
+# Colegios que tienen sólo educación media científico humanista para adultos
+col_hc <- p6_1 %>% 
+  filter(básica==0 & media_tec==0)
+#----------------------------------------------------------------------#
+
+# Colegios que tienen ambas medias pero no básica
+col_medias <- p6_1 %>% 
+  filter(básica==0 & media_HC==6 & media_tec==8)
+
+# Colegios con básica y media técnico pero no científico humanista
+col_ba_tec <- p6_1 %>% 
+  filter(básica==3 & media_HC==0 & media_tec==8)
+# No hay colegios con básica y tec. sin científico humanista.
+
+# Colegios con básica y media HC pero no técnico
+col_ba_hc <- p6_1 %>% 
+  filter(básica==3 & media_HC==6 & media_tec==0)
+# Hay muchos colegios que ofrecen básica y media HC pero no téc.
+
+# Colegios con las 3 educaciones
+col_mixtos <- p6_1 %>% 
+  filter(básica==3 & media_HC==6 & media_tec==8)
+col_mixtos$Comuna
+# Agregamos las comunas
+p6_1 <- p6_1 %>% 
+  merge(p6) %>% 
+  select(-COD_ENSE2) %>%
+  rename(Comuna=NOM_COM_RBD,
+         Establecimiento=NOM_RBD)
+p6_1 <- p6_1 %>% distinct()
+```
+
+Este es el top 5 de comunas que tienen más establecimientos que imparten educación para adultos:
+
+```{r}
+library(kableExtra)
+table(p6_1$Comuna) %>% sort(decreasing = TRUE) %>% head(5)
+```
+
+### Preguntas 7 y 8: ¿En qué comunas hay mayor nivel de reprobados? ¿En qué colegios hay menor nivel de reprobados?
+
+```{r}
+library(dplyr)
+
+p7 <- data.frame(comuna=base$NOM_COM_RBD,
+                 reprobados_h=base$REP_HOM_TO,
+                 reprobadas_m=base$REP_MUJ_TO,
+                 tipo=base$COD_DEPE2,
+                 colegio=base$NOM_RBD) %>%
+  group_by(colegio) %>% 
+  summarise(colegio,
+            comuna,
+            tipo,
+            total_rep=sum(reprobados_h,reprobadas_m),
+            percent_rep=(total_rep/21112)*100) %>% 
+  distinct() %>%
+  arrange(desc(total_rep))
+sum(p7$total_rep)
+sum(base$REP_MUJ_TO,base$REP_HOM_TO)
+head(p7_1, 10)
+# diferencia de 152 entre p7 y p7_1
+```
+
+Tipos de colegios:
+
+1: Municipales
+
+2: Particular Subvencionado
+
+3: Particular Pagado
+
+4: Corporación de Administración Delegada
+
+5: Servicio Local de Educación El data p7_1 nos muestra la cantidad de reprobados por colegios. Según lo que vimos, los primeros 10 colegios pertenecen a organizaciones únicamente Municipales, Particulares Subvencionadas o Servicio Local de Educación, las cuales se distribuyen en las comunas de Colina, La Granja, La Florida, Santiago, Lo Prado, Puente Alto, Melipilla y San Joaquín.
+
+```{r}
+rep_x_comuna <- p7_1 %>%
+  group_by(comuna) %>% 
+  summarise(total_rep=sum(total_rep),
+            percent_rep=sum(percent_rep)) %>% 
+  arrange(desc(total_rep))
+```
+
+En las primeras 10 comunas se encuentra más del 55,4% de los reprobados.
+
+```{r}
+rep_x_comuna[1:10,]
+sum(rep_x_comuna$percent_rep[1:10])
+```
+
+Gráfico por tipo de colegio
+
+```{r}
+library(ggplot2)
+ggplot(rep_x_comuna, mapping = aes(x = total_rep, y = comuna)) + 
+  geom_col(aes(x= total_rep, y=reorder(comuna,total_rep)), fill="#581845")  +
+  theme(panel.grid.major.y = element_line()) +
+  labs(title = "Comunas con más estudiantes reprobados entre 1° y 8° básico en la RM", 
+       caption = "FUENTE: Base de Datos Mineduc (2020)")+
+  ylab("Comuna") +
+  xlab("Número de estudiantes reprobados")
+```
+
+```{r}
+library(ggplot2)
+ggplot(rep_x_comuna, mapping = aes(x = total_rep, y = comuna)) + 
+  geom_col(aes(x= total_rep, y=reorder(comuna,total_rep)), fill="#581845") +
+  theme(panel.grid.major.y = element_blank(),
+        panel.border = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(title = "Comunas con más estudiantes reprobados entre 1° y 8° básico en la RM", 
+       caption = "FUENTE: Base de Datos Mineduc (2020)")+
+  ylab("Comuna") +
+  xlab("Número de estudiantes reprobados")
+
+```
+
+### Pregunta 9: ¿En qué comunas hay mayor nivel de aprobados?
+
+```{r}
+library(dplyr)
+p9 <- base %>% 
+  select(NOM_RBD,NOM_COM_RBD, APR_MUJ_TO, APR_SI_TO, APR_HOM_TO,
+         COD_DEPE2,COD_ENSE2)
+p9_1 <- data.frame(colegio=p9$NOM_RBD,
+                 comuna=p9$NOM_COM_RBD,
+                 apr_h=p9$APR_HOM_TO,
+                 apr_m=p9$APR_MUJ_TO,
+                 apr_si=p9$APR_SI_TO,
+                 enseñanza=p9$COD_ENSE2,
+                 tipo=p9$COD_DEPE2) %>% 
+  group_by(colegio) %>% 
+  summarise(colegio,
+            comuna,
+            tipo,
+            apr_h,
+            apr_m,
+            apr_si,
+            apr_total=sum(apr_h,apr_m,apr_si)) %>%
+  distinct(colegio, apr_total)
+
+### REVISAR PREGUNTA 7 ####
+
+
+
+base_de_datos %>% 
+  select(todas las variables cuantitativas) %>% 
+    skim() %>% 
+      yank("numeric") %>% 
+      flextable() %>% 
+      set_header_labels(skim_variable= "Variable",
+                        mean= "Media",
+                        sd="Desviación Estndr",
+                        p0="Mínimo",
+                        p25="Q1",
+                        p50="Mediana",
+                        p75="Q3",
+                        p100="Máximo") %>% 
+      colformat_double(digits=2) %>% 
+  select(-c("n_missing", "complete_rate", "hist"))
+
+
+
+prop.table(table(base$NOM_COM_RBD))
+```
+
+# Conclusión
